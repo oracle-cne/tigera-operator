@@ -1,0 +1,23 @@
+@Library('olcne-pipeline') _
+import com.oracle.olcne.pipeline.BranchPattern
+
+String version = "1.40.3";
+String image_tag = "v" + version;
+String registry_namespace = "olcne";
+String registry = "container-registry.oracle.com/" + registry_namespace;
+
+olcnePipeline(
+    branchPattern: new BranchPattern(master: "oracle/release/1.40.3", feature: '(?!^release/.*$)(^.*$)'),
+    containers: [
+        (registry + '/tigera-operator:' + image_tag) : registry_namespace + '/tigera-operator:' + image_tag,
+    ],
+    platforms: ['ol8'],
+    architectures: ['x86_64', 'aarch64'],
+    yumOL8Repos: ['ol8_appstream', 'ol8_codeready_builder', 'ol8_addons'],
+    customPlatformStages: [
+      customPlatformSteps: [
+        ol8: [container: [enabled: true], buildContainerRpms: [enabled: true]],
+      ],
+    ],
+)
+
