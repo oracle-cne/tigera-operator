@@ -26,8 +26,13 @@ Kubernetes operator manages the lifecycle of a Calico or Calico Enterprise insta
 
 %build
 %global rpm_name %{app_name}-%{version}-%{release}.%{_build_arch}
-dnf clean all
-dnf install -y --downloadonly --downloaddir=${PWD}/rpms %{rpm_name}
+mkdir -p ${PWD}/rpms
+if [ -f /shared/%{rpm_name}.rpm ]; then
+    cp /shared/%{rpm_name}.rpm ${PWD}/rpms/
+else
+    dnf clean all
+    dnf install -y --downloadonly --downloaddir=${PWD}/rpms %{rpm_name}
+fi
 
 %__rm .dockerignore
 chmod +x ./olm/builds/build-image.sh
