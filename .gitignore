@@ -96,6 +96,10 @@ pkg/report
 ut/
 # tgz helm charts
 *.tgz
+!pkg/render/istio/base.tgz
+!pkg/render/istio/istiod.tgz
+!pkg/render/istio/cni.tgz
+!pkg/render/istio/ztunnel.tgz
 
 # Tar files created as part of running FVs
 *.tar
