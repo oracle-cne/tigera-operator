@@ -23,6 +23,7 @@ BuildRequires:  podman
 BuildRequires:  podman-docker
 BuildRequires:  make
 BuildRequires:  golang
+BuildRequires:  curl
 
 %description
 Kubernetes operator which manages the lifecycle of a Calico or Calico Enterprise installation on Kubernetes
@@ -35,6 +36,8 @@ Kubernetes operator which manages the lifecycle of a Calico or Calico Enterprise
 %build
 GOPATH=$(pwd)
 mkdir -p ${GOPATH}/bin
+
+make istio_charts
 
 go build -trimpath=false -v \
          -o ${GOPATH}/bin/operator \
