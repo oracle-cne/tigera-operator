@@ -1,0 +1,114 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package v1alpha1
+
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
+const (
+	// PolicyConditionAggregated indicates whether the policy has been aggregated
+	// to satisfy CEL constraints in PolicyAncestorStatus (not exceeding 16).
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Aggregated"
+	//
+	PolicyConditionAggregated gwapiv1.PolicyConditionType = "Aggregated"
+
+	// PolicyReasonAggregated is used with the "Aggregated" condition when the policy
+	// is aggregated to satisfy CEL constraints in PolicyAncestorStatus (not exceeding 16).
+	PolicyReasonAggregated gwapiv1.PolicyConditionReason = "Aggregated"
+)
+
+type PolicyTargetReferences struct {
+	// TargetRef is the name of the resource this policy is being attached to.
+	// This policy and the TargetRef MUST be in the same namespace for this
+	// Policy to have effect
+	//
+	// Deprecated: use targetRefs/targetSelectors instead
+	TargetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName `json:"targetRef,omitempty"`
+
+	// TargetRefs are the names of the Gateway resources this policy
+	// is being attached to.
+	TargetRefs []gwapiv1.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs,omitempty"`
+
+	// TargetSelectors allow targeting resources for this policy based on labels
+	TargetSelectors []TargetSelector `json:"targetSelectors,omitempty"`
+}
+
+// +kubebuilder:validation:XValidation:rule="has(self.group) ? self.group == 'gateway.networking.k8s.io' : true ", message="group must be gateway.networking.k8s.io"
+type TargetSelector struct {
+	// Group is the group that this selector targets. Defaults to gateway.networking.k8s.io
+	//
+	// +kubebuilder:default:="gateway.networking.k8s.io"
+	Group *gwapiv1.Group `json:"group,omitempty"`
+
+	// Kind is the resource kind that this selector targets.
+	Kind gwapiv1.Kind `json:"kind"`
+
+	// Namespaces determines which namespaces are considered for target selection.
+	//
+	// If unspecified, only targets in the same namespace as this policy are considered.
+	//
+	// When specified, the effective set of namespaces is always constrained to the
+	// namespaces watched by Envoy Gateway.
+	//
+	// Selecting targets across namespaces requires a ReferenceGrant in the target
+	// namespace that allows this policy kind to reference the selected target kind.
+	// Cross-namespace targets without a matching ReferenceGrant are ignored.
+	//
+	// +optional
+	Namespaces *TargetSelectorNamespaces `json:"namespaces,omitempty"`
+
+	// MatchLabels are the set of label selectors for identifying the targeted resource.
+	//
+	// +optional
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+
+	// MatchExpressions is a list of label selector requirements. The requirements are ANDed.
+	//
+	// +optional
+	// +listType=atomic
+	MatchExpressions []metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty"`
+}
+
+type TargetNamespaceFrom string
+
+const (
+	// TargetNamespaceFromSame limits target selection to the policy's namespace.
+	TargetNamespaceFromSame TargetNamespaceFrom = "Same"
+	// TargetNamespaceFromAll allows target selection from all watched namespaces.
+	TargetNamespaceFromAll TargetNamespaceFrom = "All"
+	// TargetNamespaceFromSelector allows target selection from watched namespaces matching the selector.
+	TargetNamespaceFromSelector TargetNamespaceFrom = "Selector"
+)
+
+// TargetSelectorNamespaces determines which namespaces are considered for target selection.
+// +kubebuilder:validation:XValidation:rule="self.from != 'Selector' || has(self.selector)", message="selector must be specified when from is Selector"
+type TargetSelectorNamespaces struct {
+	// From indicates how namespaces are selected for this target selector.
+	//
+	// All means all namespaces watched by Envoy Gateway.
+	// Selector means namespaces watched by Envoy Gateway that match Selector.
+	//
+	// +kubebuilder:validation:Enum=Same;All;Selector
+	// +kubebuilder:default:=Same
+	From TargetNamespaceFrom `json:"from"`
+
+	// Selector selects namespaces when From is set to Selector.
+	//
+	// +optional
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+}
+
+func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+	if p.TargetRef != nil {
+		return []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*p.TargetRef}
+	}
+	return p.TargetRefs
+}
